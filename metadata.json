@@ -1,0 +1,5 @@
+{
+  "name": "Hệ thống Quản lý Công việc - Minh Thắng ",
+  "description": "Một ứng dụng web để quản lý công việc theo kế hoạch (Plan) và phát sinh (Ad-hoc), tự động tính toán KPI, và dự báo hiệu suất. Bao gồm các chế độ xem linh hoạt như Danh sách, Kanban và các dashboard phân tích chuyên sâu.",
+  "requestFramePermissions": []
+}
