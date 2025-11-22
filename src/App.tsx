@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { Task, Config, TaskStatus, Rule, LogEntry, TriggerType, WorkType, Baseline, MeetingNote, ActionItem, ActionItemStatus, Filters, Sprint, Objective, KeyResult, TaskTemplate, ReviewStatus, LateReason, TaskOutcome, TimeRange, ApprovalHistoryEntry, ApprovalStatus, Comment } from './types';
+import { Task, Config, Rule, LogEntry, TriggerType, Baseline, MeetingNote, ActionItem, ActionItemStatus, Filters, Sprint, Objective, KeyResult, TaskTemplate, LateReason, TaskOutcome, TimeRange, ApprovalHistoryEntry, ApprovalStatus, Comment, TaskStatus } from './types';
 import { DEFAULT_CONFIG, DEFAULT_RULES, DEFAULT_PERIODS, DEFAULT_ASSIGNEES, DEFAULT_PROJECTS, DEFAULT_MEETING_NOTES, DEFAULT_ACTION_ITEMS, DEFAULT_SPRINTS, DEFAULT_OBJECTIVES, DEFAULT_KEY_RESULTS, DEFAULT_TASK_TEMPLATES, DEFAULT_TAGS } from './constants';
 import { useKpiCalculations } from './hooks/useKpiCalculations';
 import { generateKpiSummary } from './services/geminiService';
 import { runAutomationEngine } from './services/automationService';
-// --- 1. IMPORT FIREBASE SERVICE ---
+// --- 1. QUAN TRỌNG: KẾT NỐI FIREBASE ---
 import { taskService } from './services/taskService'; 
+
 import { TaskForm } from './components/TaskForm';
 import { TasksTable } from './components/TasksTable';
 import { ConfigPanel } from './components/ConfigPanel';
@@ -22,7 +23,7 @@ import { OutcomeModal } from './components/OutcomeModal';
 import { StaffWorkSummaryView } from './components/StaffWorkSummaryView';
 import { UserSelector } from './components/UserSelector';
 import { FilterBar } from './components/FilterBar';
-// --- 2. THÊM ICON MENU (Bars3Icon) ---
+// --- 2. IMPORT ICON MENU ---
 import { ConfigIcon, DataIcon, ForecastIcon, TeamIcon, UserIcon, KanbanIcon, AutomationIcon, BaselineIcon, GanttChartIcon, ListBulletIcon, ClipboardListIcon, DocumentReportIcon, PlanningIcon, OkrIcon, SunIcon, PlusIcon } from './components/icons/IconComponents';
 import { RuleEditorModal } from './components/RuleEditorModal';
 import { BulkActionBar } from './components/BulkActionBar';
@@ -35,7 +36,7 @@ import { QuickCreatePanel } from './components/QuickCreatePanel';
 import { RootCauseModal } from './components/RootCauseModal';
 import { ReviewSubmissionModal } from './components/ReviewSubmissionModal';
 
-// Icon Menu đơn giản
+// Icon Menu (3 gạch)
 const MenuIcon = ({ className }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
@@ -45,10 +46,10 @@ const MenuIcon = ({ className }: { className?: string }) => (
 type View = 'my_day' | 'kpi_team' | 'kpi_nhan_vien' | 'forecast' | 'tasks' | 'kanban' | 'planning_board' | 'gantt_calendar' | 'meetings_actions' | 'staff_summary' | 'okr' | 'automation' | 'baseline' | 'master_data' | 'config';
 
 const App: React.FC = () => {
-  // --- 3. STATE CHO SIDEBAR ---
+  // --- 3. STATE SIDEBAR ---
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // --- 4. STATE DATA (Bắt đầu rỗng để chờ Firebase) ---
+  // --- 4. STATE DỮ LIỆU (Rỗng để chờ tải) ---
   const [tasks, setTasks] = useState<Task[]>([]); 
   const [config, setConfig] = useState<Config>(DEFAULT_CONFIG);
   const [rules, setRules] = useState<Rule[]>(DEFAULT_RULES);
@@ -74,19 +75,12 @@ const App: React.FC = () => {
   const [recentlyCompletedTaskId, setRecentlyCompletedTaskId] = useState<string | null>(null);
   
   const [reviewSubmissionModalState, setReviewSubmissionModalState] = useState<{ isOpen: boolean; task: Task | null }>({ isOpen: false, task: null });
-
   const [ruleEditorState, setRuleEditorState] = useState<{ isOpen: boolean; rule: Rule | null }>({ isOpen: false, rule: null });
 
   const [currentUser, setCurrentUser] = useState<string>(DEFAULT_ASSIGNEES[0]);
   const [viewMode, setViewMode] = useState<'user' | 'manager'>('user');
   const [filters, setFilters] = useState<Filters>({
-    assignee: 'all',
-    project: 'all',
-    status: 'all',
-    priority: 'all',
-    workType: 'all',
-    channel: 'all',
-    tags: 'all',
+    assignee: 'all', project: 'all', status: 'all', priority: 'all', workType: 'all', channel: 'all', tags: 'all',
   });
   const [timeRange, setTimeRange] = useState<TimeRange>(() => 
     (localStorage.getItem('timeRangeFilter') as TimeRange) || 'month'
@@ -99,15 +93,14 @@ const App: React.FC = () => {
   const [quickCreateInitialData, setQuickCreateInitialData] = useState<Partial<Task> | null>(null);
   const [panelTitle, setPanelTitle] = useState('Tạo Task mới');
 
-  // --- 5. LOAD DỮ LIỆU TỪ FIREBASE ---
+  // --- 5. EFFECT: TẢI DỮ LIỆU TỪ FIREBASE ---
   useEffect(() => {
     const loadData = async () => {
       try {
-        // 1. Tasks
+        console.log("Đang tải dữ liệu từ Firebase...");
         const tasksData = await taskService.getAllTasks();
         setTasks(tasksData);
 
-        // 2. Master Data (Nhân sự, Dự án)
         const masterData = await taskService.getMasterData();
         if (masterData) {
             if (masterData.assignees && Array.isArray(masterData.assignees)) setAssignees(masterData.assignees);
@@ -125,14 +118,12 @@ const App: React.FC = () => {
   
   const allTags = useMemo(() => {
     const tagsSet = new Set(DEFAULT_TAGS);
-    tasks.forEach(task => {
-        task.tags?.forEach(tag => tagsSet.add(tag));
-    });
+    tasks.forEach(task => task.tags?.forEach(tag => tagsSet.add(tag)));
     return Array.from(tagsSet).sort();
   }, [tasks]);
 
   const filteredTasks = useMemo(() => {
-      // ... Logic filter giữ nguyên ...
+      // ... Giữ nguyên logic filter ...
       const getThisWeekRange = (): { start: Date; end: Date } => {
           const now = new Date();
           const dayOfWeek = now.getDay(); 
@@ -194,52 +185,13 @@ const App: React.FC = () => {
   useEffect(() => { const handleKeyDown = (e: KeyboardEvent) => { if (!e.altKey) return; let newRange: TimeRange | null = null; switch (e.key.toLowerCase()) { case 'w': newRange = 'week'; break; case 'm': newRange = 'month'; break; case 'q': newRange = 'quarter'; break; case 'a': newRange = 'all'; break; default: return; } e.preventDefault(); setTimeRange(newRange); }; window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, []);
   useEffect(() => { if (recentlyCompletedTaskId) { const timer = setTimeout(() => { setRecentlyCompletedTaskId(null); }, 2000); return () => clearTimeout(timer); } }, [recentlyCompletedTaskId]);
 
-  // Weekly Logic (Mock local update for now, ideally sync to Firebase logs)
-  const consolidateWeeklyNotes = useCallback(() => {
-      setTasks(prev => prev.map(t => {
-          if (t.currentStatusNote && t.currentStatusNote.trim() !== '') {
-              const newEntry = {
-                  date: new Date().toISOString(),
-                  note: `[Tuần này] ${t.currentStatusNote}`
-              };
-              return {
-                  ...t,
-                  currentStatusNote: '', 
-                  noteHistory: [newEntry, ...(t.noteHistory || [])]
-              };
-          }
-          return t;
-      }));
-      const newLog: LogEntry = { id: `log-${Date.now()}`, timestamp: new Date().toISOString(), message: `Đã chạy chốt sổ tuần: Ghi chú tiến độ đã được lưu vào Kết quả.` };
-      addLogEntries([newLog]);
-  }, []);
-
-  useEffect(() => {
-      const today = new Date();
-      if (today.getDay() === 6) { 
-          const lastRun = localStorage.getItem('lastWeeklyConsolidation');
-          const todayStr = today.toDateString();
-          if (lastRun !== todayStr) {
-              consolidateWeeklyNotes();
-              localStorage.setItem('lastWeeklyConsolidation', todayStr);
-          }
-      }
-  }, [consolidateWeeklyNotes]);
-
-
-  const addLogEntries = useCallback((newLogs: LogEntry[]) => { if (newLogs.length > 0) setLogs(prevLogs => [...newLogs, ...prevLogs]); }, []);
-
-  // --- 6. HÀM XỬ LÝ DỮ LIỆU (CÓ GỌI FIREBASE) ---
+  // --- 6. HÀM XỬ LÝ DỮ LIỆU (CÓ KẾT NỐI FIREBASE) ---
   const handleAddTask = useCallback(async (taskData: Omit<Task, 'id'>, actionItemsData: Omit<ActionItem, 'id' | 'taskId' | 'meetingNoteId'>[], onSuccessCallback?: () => void) => {
     try {
-        const newTaskInit = { 
-            ...taskData, 
-            approvalStatus: ApprovalStatus.NotApplicable, 
-            comments: [] 
-        };
+        const newTaskInit = { ...taskData, approvalStatus: ApprovalStatus.NotApplicable, comments: [] };
         const { modifiedTask: processedTask, newLogs } = runAutomationEngine(TriggerType.TaskCreated, newTaskInit as Task, null, rules);
         
-        // Gửi lên Firebase
+        // Lưu lên Firebase
         const savedTask = await taskService.addTask(processedTask);
         
         setTasks(prevTasks => [savedTask, ...prevTasks]);
@@ -251,7 +203,7 @@ const App: React.FC = () => {
         console.error("Lỗi thêm task:", error);
         alert("Lỗi khi thêm task. Vui lòng thử lại.");
     }
-  }, [rules, addLogEntries]);
+  }, [rules]);
 
   const handleAddActionItem = useCallback((taskId: string) => {
     const parentTask = tasks.find(t => t.id === taskId);
@@ -263,13 +215,10 @@ const App: React.FC = () => {
   const handleDeleteTask = useCallback(async (taskId: string) => { 
       if(!window.confirm("Bạn có chắc chắn muốn xóa công việc này?")) return;
       try {
-          await taskService.deleteTask(taskId);
+          await taskService.deleteTask(taskId); // Xóa trên Firebase
           setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId)); 
           setActionItems(prev => prev.filter(ai => ai.taskId !== taskId)); 
-      } catch (error) {
-          console.error("Lỗi xóa task:", error);
-          alert("Không thể xóa task trên server.");
-      }
+      } catch (error) { console.error("Lỗi xóa task:", error); alert("Không thể xóa task."); }
   }, []);
   
   const completeTask = useCallback(async (taskId: string, updates: Partial<Task>) => {
@@ -281,21 +230,15 @@ const App: React.FC = () => {
         taskWithUpdates.noteHistory = [newHistoryEntry, ...(taskWithUpdates.noteHistory || [])];
         taskWithUpdates.currentStatusNote = '';
       }
-      let updatedTask = { 
-          ...taskWithUpdates, 
-          status: TaskStatus.Done,
-          completionDate: originalTask.completionDate || new Date().toISOString().split('T')[0],
-      };
+      let updatedTask = { ...taskWithUpdates, status: TaskStatus.Done, completionDate: originalTask.completionDate || new Date().toISOString().split('T')[0] };
       const { modifiedTask, newLogs } = runAutomationEngine(TriggerType.StatusChanged, updatedTask, originalTask, rules);
       try {
-          await taskService.updateTask(taskId, modifiedTask);
+          await taskService.updateTask(taskId, modifiedTask); // Cập nhật Firebase
           setTasks(prevTasks => prevTasks.map(t => t.id === taskId ? modifiedTask : t));
           addLogEntries(newLogs);
           setRecentlyCompletedTaskId(taskId);
-      } catch (error) {
-          console.error("Lỗi hoàn thành task:", error);
-      }
-  }, [tasks, rules, addLogEntries]);
+      } catch (error) { console.error("Lỗi hoàn thành task:", error); }
+  }, [tasks, rules]);
 
   const handleTaskStatusChange = useCallback(async (taskId: string, newStatus: TaskStatus) => {
     const originalTask = tasks.find(t => t.id === taskId);
@@ -323,15 +266,14 @@ const App: React.FC = () => {
         let updatedTask = { ...originalTask, status: newStatus, completionDate: undefined };
         const { modifiedTask, newLogs } = runAutomationEngine(TriggerType.StatusChanged, updatedTask, originalTask, rules);
         try {
-            await taskService.updateTask(taskId, modifiedTask);
+            await taskService.updateTask(taskId, modifiedTask); // Cập nhật Firebase
             setTasks(prevTasks => prevTasks.map(t => t.id === taskId ? modifiedTask : t));
             addLogEntries(newLogs);
-        } catch (error) {
-            console.error("Lỗi đổi trạng thái:", error);
-        }
+        } catch (error) { console.error("Lỗi đổi trạng thái:", error); }
     }
-  }, [tasks, rules, addLogEntries, completeTask]);
+  }, [tasks, rules, completeTask]);
 
+  // --- Modal Handlers (Lưu ý: Cần cập nhật Firebase ở đây nếu có logic update) ---
   const handleOutcomeSubmit = useCallback((taskId: string, outcome: TaskOutcome) => {
     const task = tasks.find(t => t.id === taskId);
     if(!task) return;
@@ -362,6 +304,9 @@ const App: React.FC = () => {
       }
   }, [tasks, completeTask]);
 
+  const addLogEntries = useCallback((newLogs: LogEntry[]) => { if (newLogs.length > 0) setLogs(prevLogs => [...newLogs, ...prevLogs]); }, []);
+
+  // --- Approval Handlers (Connected to Firebase) ---
   const handleSubmitReview = useCallback(async (taskId: string, comment: string, mentions: string[]) => {
       const task = tasks.find(t => t.id === taskId);
       if (!task) return;
@@ -417,7 +362,6 @@ const App: React.FC = () => {
   }, []);
 
   const handleUpdateActionItem = useCallback((actionItemId: string, updates: Partial<ActionItem>) => { setActionItems(prev => prev.map(ai => ai.id === actionItemId ? {...ai, ...updates} : ai)); }, []);
-  
   const handleUpdateTaskPlanning = useCallback(async (taskId: string, newPlan: { week?: string; month?: string; quarter?: string }) => { 
       try {
           const updates = { plannedWeek: undefined, plannedMonth: undefined, plannedQuarter: undefined, ...newPlan };
@@ -446,7 +390,6 @@ const App: React.FC = () => {
   const handleToggleTaskSelection = useCallback((taskId: string) => { setSelectedTaskIds(prev => { const newSet = new Set(prev); if (newSet.has(taskId)) { newSet.delete(taskId); } else { newSet.add(taskId); } return newSet; }); }, []);
   const handleToggleSelectAll = useCallback(() => { if (selectedTaskIds.size === filteredTasks.length) { setSelectedTaskIds(new Set()); } else { const allFilteredIds = new Set(filteredTasks.map(t => t.id)); setSelectedTaskIds(allFilteredIds); } }, [filteredTasks, selectedTaskIds.size]);
   const handleClearSelection = () => { setSelectedTaskIds(new Set()); };
-  
   const handleBulkDelete = async () => { 
       if (window.confirm(`Bạn có chắc muốn xóa ${selectedTaskIds.size} công việc đã chọn?`)) { 
           const selectedIds = Array.from(selectedTaskIds); 
@@ -492,7 +435,7 @@ const App: React.FC = () => {
   const handleOpenQuickCreate = (initialData: Partial<Task> = {}) => { setPanelTitle('Tạo Task mới'); setQuickCreateInitialData({ assignees: [currentUser], ...initialData }); setIsQuickCreateOpen(true); };
   const handleOpenCloneTask = (taskId: string) => { const taskToClone = tasks.find(t => t.id === taskId); if (!taskToClone) return; const duration = new Date(taskToClone.deadline).getTime() - new Date(taskToClone.startDate).getTime(); const today = new Date(); const startOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 1)); const newDeadline = new Date(startOfWeek.getTime() + duration); const clonedData: Partial<Task> = { ...taskToClone, name: `[Copy] ${taskToClone.name}`, status: TaskStatus.Todo, currentStatusNote: '', startDate: startOfWeek.toISOString().split('T')[0], deadline: newDeadline.toISOString().split('T')[0], completionDate: undefined, id: undefined, }; setPanelTitle(`Nhân bản từ: ${taskToClone.name}`); setQuickCreateInitialData(clonedData); setIsQuickCreateOpen(true); };
   
-  // --- MASTER DATA HANDLERS (ĐÃ SỬA: CÓ LƯU FIREBASE) ---
+  // --- MASTER DATA HANDLERS (LƯU FIREBASE) ---
   const handleAddAssignee = async (name: string) => { const newAssignees = [...assignees, name]; setAssignees(newAssignees); await taskService.saveMasterData({ assignees: newAssignees }); };
   const handleUpdateAssignee = async (oldName: string, newName: string) => { const newAssignees = assignees.map(a => a === oldName ? newName : a); setAssignees(newAssignees); await taskService.saveMasterData({ assignees: newAssignees }); };
   const handleDeleteAssignee = async (name: string) => { const newAssignees = assignees.filter(a => a !== name); setAssignees(newAssignees); await taskService.saveMasterData({ assignees: newAssignees }); };
@@ -601,6 +544,7 @@ const App: React.FC = () => {
         />
     </QuickCreatePanel>
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900 font-sans text-slate-900 dark:text-slate-200">
+        {/* --- SIDEBAR VỚI HIỆU ỨNG ĐÓNG MỞ --- */}
         <aside className={`bg-white dark:bg-slate-800 flex flex-col border-r border-slate-200 dark:border-slate-700 transition-all duration-300 ${isSidebarOpen ? 'w-64' : 'w-0 overflow-hidden'}`}>
             <div className="px-4 pt-6 pb-4 flex items-center justify-between"><h1 className="text-2xl font-bold text-primary-600 dark:text-primary-400 px-2 whitespace-nowrap">TaskMaster</h1></div>
             <div className="px-4 mb-4"><button onClick={() => handleOpenQuickCreate()} className="w-full flex items-center justify-center h-10 px-4 border border-transparent shadow-sm text-sm font-semibold rounded-full text-white bg-primary-600 hover:bg-primary-700 transition-colors whitespace-nowrap"><PlusIcon className="h-5 w-5 mr-2 -ml-1" /> Tạo Task</button></div>
@@ -608,23 +552,23 @@ const App: React.FC = () => {
             <div className="p-4 mt-auto space-y-2"><ViewModeSwitcher viewMode={viewMode} onViewModeChange={handleViewModeChange} />{viewMode === 'user' && (<UserSelector users={assignees} currentUser={currentUser} onUserChange={setCurrentUser} />)}</div>
         </aside>
         
-        {/* --- 6. THÊM NÚT TOGGLE VÀ CHỈNH LAYOUT --- */}
+        {/* --- MAIN CONTENT VỚI NÚT TOGGLE --- */}
         <main className="flex-1 flex flex-col h-screen overflow-hidden">
-             {/* Top Bar with Toggle Button */}
+            {/* Top Bar */}
             <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-4 flex items-center">
                  <button 
                     onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                     className="p-2 rounded-md hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 mr-4"
+                    title="Đóng/Mở Menu"
                  >
                     <MenuIcon className="h-6 w-6" />
                  </button>
-                 {/* Breadcrumb or Title could go here */}
                  <h2 className="text-lg font-semibold text-slate-800 dark:text-white">
                     {views.find(v => v.id === activeView)?.label}
                  </h2>
             </div>
 
-            {/* Main Content Area */}
+            {/* Content */}
             <div className="flex-1 p-6 lg:p-10 overflow-y-auto">
                 <div className="w-full max-w-full mx-auto flex flex-col gap-8">
                     {viewsWithFilters.includes(activeView) && (<FilterBar filters={filters} setFilters={setFilters} assignees={assignees} projects={projects} tags={allTags} currentUser={currentUser} viewMode={viewMode} taskCount={filteredTasks.length} totalTaskCount={tasks.length} timeRange={timeRange} setTimeRange={setTimeRange} />)}
