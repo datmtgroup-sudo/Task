@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ActionItem, MeetingNote, Task, ActionItemStatus } from '../types';
 import { ClipboardListIcon, UserIcon } from './icons/IconComponents';
 
@@ -7,9 +7,10 @@ interface MeetingsAndActionsViewProps {
     meetingNotes: MeetingNote[];
     tasks: Task[];
     assignees: string[];
+    // THÊM DÒNG NÀY ĐỂ SỬA LỖI:
+    onUpdateActionItem?: (actionItemId: string, updates: Partial<ActionItem>) => void;
 }
 
-// FIX: Corrected ActionItemStatus enum keys and added all required statuses.
 const statusClasses: Record<ActionItemStatus, string> = {
     [ActionItemStatus.Todo]: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
     [ActionItemStatus.Doing]: 'bg-blue-100 text-blue-700 dark:bg-blue-700 dark:text-blue-200',
@@ -18,7 +19,7 @@ const statusClasses: Record<ActionItemStatus, string> = {
     [ActionItemStatus.Defer]: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-700 dark:text-yellow-200',
 };
 
-export const MeetingsAndActionsView: React.FC<MeetingsAndActionsViewProps> = ({ actionItems, meetingNotes, tasks, assignees }) => {
+export const MeetingsAndActionsView: React.FC<MeetingsAndActionsViewProps> = ({ actionItems, meetingNotes, tasks, assignees, onUpdateActionItem }) => {
     
     const getTaskNameById = (taskId: string) => tasks.find(t => t.id === taskId)?.name || 'N/A';
     const getMeetingTitleById = (noteId?: string) => noteId ? meetingNotes.find(n => n.id === noteId)?.title || 'N/A' : 'N/A';
@@ -63,15 +64,22 @@ export const MeetingsAndActionsView: React.FC<MeetingsAndActionsViewProps> = ({ 
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Phụ trách</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Hạn chót</th>
                                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Trạng thái</th>
-                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-300 uppercase tracking-wider">Liên kết</th>
+                                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Liên kết</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white dark:bg-slate-800 divide-y divide-slate-200 dark:divide-slate-700">
                                 {actionItems.map(item => (
                                     <tr key={item.id}>
                                         <td className="px-6 py-4 whitespace-normal text-sm font-medium text-slate-900 dark:text-white">{item.description}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{item.owner}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{item.dueDate}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">{item.owners.join(', ')}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-300">
+                                            <input 
+                                                type="date" 
+                                                value={item.dueDate || ''} 
+                                                onChange={(e) => onUpdateActionItem && onUpdateActionItem(item.id, { dueDate: e.target.value })}
+                                                className="bg-transparent border border-slate-200 dark:border-slate-600 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
+                                            />
+                                        </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClasses[item.status]}`}>
                                                 {item.status}
