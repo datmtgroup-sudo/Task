@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Task, ActionItem, Filters, Priority, WorkType, TaskStatus } from '../types';
 import { getWeekNumber } from '../utils/reportUtils';
@@ -133,10 +132,12 @@ const DropZonePlaceholder: React.FC<{ text?: string }> = ({ text = "Kéo thả t
 // --- Main Component ---
 
 export const PlanningView: React.FC<PlanningViewProps> = (props) => {
-    const { tasks, filters, actionItems, assignees, currentUser, projects, onUpdateTask, onDeleteTask, onOpenQuickCreate, onUpdateActionItem, onAddActionItem, onAddComment, onApprovalAction } = props;
+    const { tasks, filters, actionItems, assignees, currentUser, projects, onUpdateTask, onDeleteTask, onOpenQuickCreate } = props;
     
     const [mode, setMode] = useState<PlanningMode>('week');
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    
+    // Navigation State
     const [currentDate, setCurrentDate] = useState(new Date()); 
 
     // --- Helpers for Time Manipulation ---
@@ -199,7 +200,7 @@ export const PlanningView: React.FC<PlanningViewProps> = (props) => {
         }
         if (mode === 'quarter') {
              const currentQuarter = Math.floor(currentDate.getMonth() / 3) + 1;
-             const startMonth = (currentQuarter - 1) * 3;
+             const startMonth = (currentQuarter - 1) * 3; 
              const monthsInQuarter = [
                  `${currentDate.getFullYear()}-${String(startMonth + 1).padStart(2, '0')}`,
                  `${currentDate.getFullYear()}-${String(startMonth + 2).padStart(2, '0')}`,
@@ -243,8 +244,7 @@ export const PlanningView: React.FC<PlanningViewProps> = (props) => {
                     title: `TUẦN ${weekNum}`,
                     subtitle: rangeStr,
                     tasks: filteredTasks.filter(t => t.plannedMonth === monthStr && t.plannedWeekOfMonth === weekNum),
-                    payload: { month: monthStr, week: weekNum },
-                    isToday: false 
+                    payload: { month: monthStr, week: weekNum }
                 };
             });
         }
@@ -261,8 +261,7 @@ export const PlanningView: React.FC<PlanningViewProps> = (props) => {
                     title: getMonthName(mIndex).toUpperCase(),
                     subtitle: `Q${currentQuarter} / ${year}`,
                     tasks: filteredTasks.filter(t => t.plannedMonth === mStr),
-                    payload: { quarter: `Q${currentQuarter}-${year}`, month: mStr },
-                    isToday: new Date().getMonth() === mIndex && new Date().getFullYear() === year
+                    payload: { quarter: `Q${currentQuarter}-${year}`, month: mStr }
                 };
             });
         }
@@ -278,7 +277,7 @@ export const PlanningView: React.FC<PlanningViewProps> = (props) => {
 
         if (targetId === 'backlog') {
              if (mode === 'week') onUpdateTask(taskId, { plannedDate: undefined, plannedWeek: undefined });
-             if (mode === 'month') onUpdateTask(taskId, { plannedWeekOfMonth: undefined });
+             if (mode === 'month') onUpdateTask(taskId, { plannedWeekOfMonth: undefined }); 
              if (mode === 'quarter') onUpdateTask(taskId, { plannedMonth: undefined, plannedQuarter: undefined });
         } else {
             if (mode === 'week') {
@@ -367,65 +366,66 @@ export const PlanningView: React.FC<PlanningViewProps> = (props) => {
 
                 {/* Dynamic Time Columns */}
                 {columns.map(col => (
-                    <div 
+                    <div
                         key={col.id}
                         className={`flex-shrink-0 w-[300px] flex flex-col rounded-2xl border transition-colors h-full ${
-                            col.isToday ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800' : 'bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'
+                            // @ts-ignore
+                            col.isToday ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-800' : 'bg-white dark:bg-gray-800/50'
                         }`}
                         onDragOver={handleDragOver}
                         // @ts-ignore
                         onDrop={(e) => handleDrop(e, col.id, col.payload)}
                     >
                         <div className={`p-4 border-b sticky top-0 z-10 rounded-t-2xl backdrop-blur-sm ${
-                            col.isToday ? 'border-blue-100 dark:border-blue-800/50 bg-blue-50/80' : 'border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80'
+                            // @ts-ignore
+                            col.isToday ? 'border-blue-100 dark:border-blue-800/50 bg-blue-50/50' : ''
                         }`}>
-                            <div className="flex justify-between items-start">
+                            <div className="flex justify-between items-center">
                                 <div>
-                                    <h3 className={`text-xs font-bold uppercase tracking-wider ${
-                                        col.isToday ? 'text-blue-700 dark:text-blue-300' : 'text-slate-700 dark:text-slate-300'
-                                    }`}>
-                                        {col.title}
-                                    </h3>
-                                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">{col.subtitle}</p>
+                                    <span className="font-semibold text-slate-700 dark:text-slate-200">{col.title}</span>
+                                    {/* @ts-ignore */}
+                                    <p className="text-xs text-slate-500">{col.subtitle}</p>
                                 </div>
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+                                <span className="text-xs font-bold bg-white dark:bg-slate-700 px-2 py-1 rounded-full shadow-sm">
                                     {col.tasks.length}
                                 </span>
                             </div>
                         </div>
 
-                        <div className="p-3 flex-1 overflow-y-auto min-h-[150px] custom-scrollbar space-y-3">
+                        <div className="p-3 flex-1 overflow-y-auto custom-scrollbar min-h-[100px]">
                             {col.tasks.map(task => (
-                                <PlanningCard 
-                                    key={task.id} 
-                                    task={task} 
+                                <PlanningCard
+                                    key={task.id}
+                                    task={task}
                                     actionItems={actionItems.filter(ai => ai.taskId === task.id)}
                                     onClick={() => setSelectedTask(task)}
                                 />
                             ))}
-                            {col.tasks.length === 0 && (
-                                <DropZonePlaceholder text="Trống" />
-                            )}
+                            {col.tasks.length === 0 && <DropZonePlaceholder text="Trống" />}
                         </div>
                     </div>
                 ))}
             </div>
 
-            <TaskDetailDrawer 
-                isOpen={!!selectedTask}
-                task={selectedTask}
-                actionItems={selectedTask ? actionItems.filter(ai => ai.taskId === selectedTask.id) : []}
-                assignees={assignees}
-                currentUser={currentUser}
-                onClose={() => setSelectedTask(null)}
-                onUpdateTask={onUpdateTask}
-                onUpdateActionItem={(id, updates) => onUpdateActionItem?.(id, updates)}
-                onAddActionItem={(taskId) => onAddActionItem?.(taskId)}
-                onDeleteTask={(taskId) => { onDeleteTask?.(taskId); setSelectedTask(null); }}
-                onCloneTask={(taskId) => onOpenQuickCreate(selectedTask ? { ...selectedTask, id: undefined, name: `[Clone] ${selectedTask.name}`, status: TaskStatus.Todo } : {})}
-                onAddComment={onAddComment}
-                onApprovalAction={onApprovalAction}
-            />
+            {/* Task Detail Drawer */}
+            {selectedTask && (
+                <TaskDetailDrawer
+                    task={selectedTask}
+                    isOpen={!!selectedTask}
+                    onClose={() => setSelectedTask(null)}
+                    currentUser={currentUser}
+                    assignees={assignees}
+                    actionItems={actionItems.filter(ai => ai.taskId === selectedTask.id)}
+                    onUpdateTask={onUpdateTask}
+                    onUpdateActionItem={props.onUpdateActionItem!}
+                    onAddActionItem={props.onAddActionItem!}
+                    onDeleteTask={onDeleteTask}
+                    onAddComment={props.onAddComment}
+                    onApprovalAction={props.onApprovalAction}
+                />
+            )}
         </div>
     );
 };
+
+export default PlanningView;
